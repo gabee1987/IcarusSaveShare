@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld("electron", {
     writeFileSync: fs.writeFileSync,
     createReadStream: fs.createReadStream,
     writeFile: fs.writeFile,
+    readdirSync: fs.readdirSync,
+    existsSync: fs.existsSync,
   },
   path: {
     join: path.join,
@@ -36,6 +38,11 @@ contextBridge.exposeInMainWorld("electron", {
   ungzip: (data, callback) => {
     zlib.ungzip(data, (err, decompressedData) => {
       callback(err, decompressedData);
+    });
+  },
+  directories: (dirPath) => {
+    return fs.readdirSync(dirPath).filter((name) => {
+      return fs.statSync(path.join(dirPath, name)).isDirectory();
     });
   },
 });

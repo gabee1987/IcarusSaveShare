@@ -1,9 +1,10 @@
 body {
   font-family: Arial, sans-serif;
   padding: 20px;
-  text-align: center;
   background: #293846;
   color: #ffb71e;
+  max-height: 600px;
+  overflow: hidden;
 }
 
 button {
@@ -30,7 +31,7 @@ button:active {
 }
 
 #messages {
-  margin-top: 20px;
+  margin-top: 5px;
   padding: 10px;
   border: 1px solid #4e5d6b;
   border-radius: 5px;
@@ -43,6 +44,7 @@ button:active {
   font-size: 14px;
   line-height: 1;
   text-align: left;
+  overflow-y: auto;
 }
 
 .label {
@@ -73,4 +75,5 @@ button:active {
 .sync-button-container {
   display: flex;
   justify-content: left;
+  margin-bottom: 20px;
 }

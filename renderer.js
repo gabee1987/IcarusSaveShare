@@ -14,7 +14,69 @@ const dropbox = dropboxV2Api.authenticate({
   token: "YOUR_DROPBOX_TOKEN",
 });
 
+let detectedSteamID = null;
+
+function detectCurrentUser() {
+  const gameDataPath = path.join(LOCALAPPDATA, "Icarus", "Saved", "PlayerData");
+  const steamIdDirectories = window.electron.directories(gameDataPath);
+
+  // Assuming there's only one directory with the steam ID
+  if (steamIdDirectories.length === 1) {
+    const steamId = steamIdDirectories[0];
+
+    // Store this steamId for global use
+    detectedSteamID = steamId;
+
+    // Find the user's name from the save file (if it exists)
+    const saveFilePath = path.join(
+      gameDataPath,
+      steamId,
+      "Prospects",
+      "Nebula Nokedli.json"
+    );
+
+    if (fs.existsSync(saveFilePath)) {
+      fs.readFile(saveFilePath, "utf8", (err, data) => {
+        if (err) {
+          document.querySelector(
+            ".userInfo"
+          ).innerHTML = `<span class="label">Error:</span> <span class="value">Reading save file for Steam ID: ${steamId}</span>`;
+          return;
+        }
+
+        const saveInfo = JSON.parse(data);
+        const user = saveInfo.ProspectInfo.AssociatedMembers.find(
+          (member) => member.UserID === steamId
+        );
+
+        if (user) {
+          document.querySelector(".userInfo").innerHTML = `
+            <span class="label">User:</span> <span class="value">${user.AccountName}</span><br>
+            <span class="label">Steam ID:</span> <span class="value">${steamId}</span>`;
+        } else {
+          document.querySelector(".userInfo").innerHTML = `
+            <span class="label">Steam ID Detected:</span> <span class="value">${steamId}</span><br>
+            <span class="label">Note:</span> <span class="value">User not found in save file.</span>`;
+        }
+      });
+    } else {
+      document.querySelector(
+        ".userInfo"
+      ).innerText = `Steam ID detected: ${steamId}, but save file not found.`;
+    }
+  } else {
+    document.querySelector(".userInfo").innerText = "No Steam ID detected.";
+  }
+}
+
 function checkForNewerVersion() {
+  // Ensure we have detectedSteamID before proceeding
+  if (!detectedSteamID) {
+    document.getElementById("messages").innerText =
+      "Steam ID not detected yet.";
+    return;
+  }
+
   // This will get metadata for the file from Dropbox.
   dropbox(
     {
@@ -31,9 +93,12 @@ function checkForNewerVersion() {
       }
 
       const localFilePath = path.join(
-        process.env.LOCALAPPDATA,
-        "Icarus/Saved/PlayerData/[SteamId]/Prospect"
+        LOCALAPPDATA,
+        "Icarus/Saved/PlayerData",
+        detectedSteamID,
+        "Prospects"
       );
+
       const localFileModifiedTime = fs.statSync(localFilePath).mtime;
       const dropboxFileModifiedTime = new Date(result.client_modified);
 
@@ -49,6 +114,13 @@ function checkForNewerVersion() {
 }
 
 function downloadProspect() {
+  // Ensure we have detectedSteamID before proceeding
+  if (!detectedSteamID) {
+    document.getElementById("messages").innerText =
+      "Steam ID not detected yet.";
+    return;
+  }
+
   dropbox(
     {
       resource: "files/download",
@@ -63,8 +135,10 @@ function downloadProspect() {
       }
 
       const localFilePath = path.join(
-        process.env.LOCALAPPDATA,
-        "Icarus/Saved/PlayerData/[SteamId]/Prospect"
+        LOCALAPPDATA,
+        "Icarus/Saved/PlayerData",
+        detectedSteamID,
+        "Prospects"
       );
 
       // Before overwriting, backup the existing file.
@@ -79,9 +153,18 @@ function downloadProspect() {
 }
 
 function uploadProspect() {
+  // Ensure we have detectedSteamID before proceeding
+  if (!detectedSteamID) {
+    document.getElementById("messages").innerText =
+      "Steam ID not detected yet.";
+    return;
+  }
+
   const localFilePath = path.join(
-    process.env.LOCALAPPDATA,
-    "Icarus/Saved/PlayerData/[SteamId]/Prospect"
+    LOCALAPPDATA,
+    "Icarus/Saved/PlayerData",
+    detectedSteamID,
+    "Prospects"
   );
 
   dropbox(
@@ -105,9 +188,19 @@ function uploadProspect() {
 }
 
 function getLocalSaveInfo() {
+  // Ensure we have detectedSteamID before proceeding
+  if (!detectedSteamID) {
+    document.getElementById("messages").innerText =
+      "Steam ID not detected yet.";
+    return;
+  }
+
   const filePath = path.join(
     LOCALAPPDATA,
-    `Icarus/Saved/PlayerData/${config.STEAM_ID}/Prospects/Nebula Nokedli.json`
+    "Icarus/Saved/PlayerData",
+    detectedSteamID,
+    "Prospects",
+    "Nebula Nokedli.json"
   );
 
   fs.readFile(filePath, "utf8", (err, data) => {
@@ -147,19 +240,25 @@ function createBackup() {
   const today = new Date();
   const dateStr = `${today.getFullYear()}_${
     today.getMonth() + 1
-  }_${today.getDate()}`;
+  }_${today.getDate()}_${today.getHours()}h${today.getMinutes()}m${today.getSeconds()}s`;
   const backupFileName = `${prospectName}_${dateStr}_backUp.gz`;
 
   // Path for the original prospect file
   const filePath = path.join(
     LOCALAPPDATA,
-    `Icarus/Saved/PlayerData/${config.STEAM_ID}/Prospects/Nebula Nokedli.json`
+    "Icarus/Saved/PlayerData",
+    detectedSteamID,
+    "Prospects",
+    "Nebula Nokedli.json"
   );
 
   // Path for the backup file
   const backupFilePath = path.join(
-    window.electron.env.LOCALAPPDATA,
-    `Icarus/Saved/PlayerData/${config.STEAM_ID}/Prospects/${backupFileName}`
+    LOCALAPPDATA,
+    "Icarus/Saved/PlayerData",
+    detectedSteamID,
+    "Prospects",
+    backupFileName
   );
 
   fs.readFile(filePath, "utf8", (err, data) => {
@@ -190,6 +289,11 @@ function createBackup() {
     });
   });
 }
+
+// Detect the actual Steam User
+document.addEventListener("DOMContentLoaded", function () {
+  detectCurrentUser();
+});
 
 // Check if the uploaded version is the most recent save
 document
