@@ -36,9 +36,22 @@ button:active {
   border-radius: 5px;
   background-color: #293846;
   min-height: 50px;
-  white-space: pre-wrap;
+  white-space: pre-line;
   word-wrap: break-word;
-  font-family: "Courier New", monospace;
+  /* font-family: "Courier New", monospace; */
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1;
+  text-align: left;
+}
+
+.label {
+  font-weight: bold;
+  color: #9fb6d4;
+}
+
+.value {
+  color: #ffb71e;
 }
 
 .logo-container {

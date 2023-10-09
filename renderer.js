@@ -7,6 +7,9 @@ const dropboxV2Api = window.electron.dropboxV2Api;
 const config = window.electron.config;
 const DROPBOX_TOKEN = config.DROPBOX_TOKEN;
 
+const LOCALAPPDATA = window.electron.env.LOCALAPPDATA;
+const zlib = window.electron.zlib;
+
 const dropbox = dropboxV2Api.authenticate({
   token: "YOUR_DROPBOX_TOKEN",
 });
@@ -103,7 +106,7 @@ function uploadProspect() {
 
 function getLocalSaveInfo() {
   const filePath = path.join(
-    process.env.LOCALAPPDATA,
+    LOCALAPPDATA,
     `Icarus/Saved/PlayerData/${config.STEAM_ID}/Prospects/Nebula Nokedli.json`
   );
 
@@ -117,18 +120,74 @@ function getLocalSaveInfo() {
     const saveInfo = JSON.parse(data);
     const prospectInfo = saveInfo.ProspectInfo;
 
-    let displayMessage = `Prospect Name: ${prospectInfo.ProspectID}\n`;
-    displayMessage += `Difficulty: ${prospectInfo.Difficulty}\n`;
-    displayMessage += `Time Spent: ${prospectInfo.ElapsedTime} seconds\n`;
-    displayMessage += "Members:\n";
+    // Convert elapsed time
+    let hours = Math.floor(prospectInfo.ElapsedTime / 3600);
+    let minutes = Math.floor((prospectInfo.ElapsedTime % 3600) / 60);
+    let seconds = prospectInfo.ElapsedTime % 60;
+
+    let displayMessage = `
+<span class="label">Prospect Name:</span> <span class="value">${prospectInfo.ProspectID}</span><br>
+<span class="label">Difficulty:</span> <span class="value">${prospectInfo.Difficulty}</span><br>
+<span class="label">Elapsed Time:</span> <span class="value">${hours}h ${minutes}m ${seconds}s</span><br>
+<span class="label">Members:</span><br>`;
 
     prospectInfo.AssociatedMembers.forEach((member) => {
-      displayMessage += `- ${member.AccountName} (${member.CharacterName}): ${
+      displayMessage += `
+<span class="value">- ${member.AccountName} (${member.CharacterName}): ${
         member.IsCurrentlyPlaying ? "Currently Playing" : "Offline"
-      }\n`;
+      }</span><br>`;
     });
 
-    document.getElementById("messages").innerText = displayMessage;
+    document.getElementById("messages").innerHTML = displayMessage;
+  });
+}
+
+function createBackup() {
+  const prospectName = "Nebula Nokedli";
+  const today = new Date();
+  const dateStr = `${today.getFullYear()}_${
+    today.getMonth() + 1
+  }_${today.getDate()}`;
+  const backupFileName = `${prospectName}_${dateStr}_backUp.gz`;
+
+  // Path for the original prospect file
+  const filePath = path.join(
+    LOCALAPPDATA,
+    `Icarus/Saved/PlayerData/${config.STEAM_ID}/Prospects/Nebula Nokedli.json`
+  );
+
+  // Path for the backup file
+  const backupFilePath = path.join(
+    window.electron.env.LOCALAPPDATA,
+    `Icarus/Saved/PlayerData/${config.STEAM_ID}/Prospects/${backupFileName}`
+  );
+
+  fs.readFile(filePath, "utf8", (err, data) => {
+    if (err) {
+      document.getElementById("messages").innerText =
+        "Error reading the original file.";
+      return;
+    }
+
+    window.electron.gzip(data, (compressionErr, compressedData) => {
+      if (compressionErr) {
+        document.getElementById("messages").innerText =
+          "Error compressing the file.";
+        return;
+      }
+
+      fs.writeFile(backupFilePath, compressedData, (writeErr) => {
+        if (writeErr) {
+          document.getElementById("messages").innerText =
+            "Error saving the backup.";
+          return;
+        }
+
+        document.getElementById(
+          "messages"
+        ).innerText = `Backup successful! Backup saved as ${backupFileName}`;
+      });
+    });
   });
 }
 
@@ -149,3 +208,6 @@ document.getElementById("uploadBtn").addEventListener("click", uploadProspect);
 document
   .getElementById("getSaveInfoBtn")
   .addEventListener("click", getLocalSaveInfo);
+
+// Back up the current world save
+document.getElementById("backUpBtn").addEventListener("click", createBackup);
