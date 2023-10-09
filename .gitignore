@@ -186,4 +186,7 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+# Exclude Config file
+config.json
+
 # End of https://www.toptal.com/developers/gitignore/api/windows,visualstudiocode,node

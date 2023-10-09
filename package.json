@@ -20,5 +20,8 @@
   "homepage": "https://github.com/gabee1987/IcarusSaveShare#readme",
   "devDependencies": {
     "electron": "^26.3.0"
+  },
+  "dependencies": {
+    "dropbox-v2-api": "^2.5.10"
   }
 }
