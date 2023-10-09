@@ -1,0 +1,24 @@
+{
+  "name": "icarussaveshare",
+  "version": "1.0.0",
+  "description": "\"# IcarusSaveShare\"",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/gabee1987/IcarusSaveShare.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/gabee1987/IcarusSaveShare/issues"
+  },
+  "homepage": "https://github.com/gabee1987/IcarusSaveShare#readme",
+  "devDependencies": {
+    "electron": "^26.3.0"
+  }
+}
