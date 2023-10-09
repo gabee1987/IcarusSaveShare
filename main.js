@@ -1,7 +1,13 @@
 require("@electron/remote/main").initialize();
+const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
-const { app, BrowserWindow } = require("electron");
 const { enable } = require("@electron/remote/main");
+
+ipcMain.handle("open-dialog", async () => {
+  return await dialog.showOpenDialog(mainWindow, {
+    /* ... some options ... */
+  });
+});
 
 let mainWindow;
 
@@ -27,7 +33,16 @@ function createWindow() {
   });
 }
 
-app.on("ready", createWindow);
+// app.on("ready", createWindow);
+app.whenReady().then(() => {
+  createWindow();
+
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      createWindow();
+    }
+  });
+});
 
 app.on("window-all-closed", function () {
   if (process.platform !== "darwin") {

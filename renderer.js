@@ -4,7 +4,7 @@ const path = window.electron.path;
 const dialog = window.electron.dialog;
 const dropboxV2Api = window.electron.dropboxV2Api;
 
-const config = require("./config.json");
+const config = window.electron.config;
 const DROPBOX_TOKEN = config.DROPBOX_TOKEN;
 
 const dropbox = dropboxV2Api.authenticate({
