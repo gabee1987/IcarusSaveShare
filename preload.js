@@ -10,10 +10,11 @@ const zlib = require("zlib");
 contextBridge.exposeInMainWorld("electron", {
   fs: {
     readFile: fs.readFile,
+    readFileSync: fs.readFileSync,
     statSync: fs.statSync,
     copyFileSync: fs.copyFileSync,
     writeFileSync: fs.writeFileSync,
-    createReadStream: fs.createReadStream,
+    createReadStream: (path) => fs.createReadStream(path),
     writeFile: fs.writeFile,
     readdirSync: fs.readdirSync,
     existsSync: fs.existsSync,
@@ -21,6 +22,8 @@ contextBridge.exposeInMainWorld("electron", {
   path: {
     join: path.join,
   },
+  path: path,
+  Buffer: Buffer,
   dialog: ipcRenderer.invoke.bind(null, "open-dialog"),
   config: config,
   dropboxV2Api: {

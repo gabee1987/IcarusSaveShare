@@ -1,4 +1,3 @@
-console.log(window.electron);
 const fs = window.electron.fs;
 const path = window.electron.path;
 const dialog = window.electron.dialog;
@@ -9,9 +8,10 @@ const DROPBOX_TOKEN = config.DROPBOX_TOKEN;
 
 const LOCALAPPDATA = window.electron.env.LOCALAPPDATA;
 const zlib = window.electron.zlib;
+const { Buffer } = window.electron;
 
 const dropbox = dropboxV2Api.authenticate({
-  token: "YOUR_DROPBOX_TOKEN",
+  token: DROPBOX_TOKEN,
 });
 
 let detectedSteamID = null;
@@ -82,35 +82,70 @@ function checkForNewerVersion() {
     {
       resource: "files/get_metadata",
       parameters: {
-        path: "/Prospect.zip",
+        path: "/Icarus/Nebula Nokedli.json",
       },
     },
     (err, result) => {
       if (err) {
-        document.getElementById("messages").innerText =
-          "Error checking for newer version.";
+        document.getElementById(
+          "messages"
+        ).innerText = `Error checking for newer version: ${
+          err.error_summary || err
+        }`; // Using error_summary from Dropbox's error object, or default to the whole error object.
         return;
       }
 
-      const localFilePath = path.join(
-        LOCALAPPDATA,
-        "Icarus/Saved/PlayerData",
-        detectedSteamID,
-        "Prospects"
-      );
+      try {
+        const localFilePath = path.join(
+          LOCALAPPDATA,
+          "Icarus/Saved/PlayerData",
+          detectedSteamID,
+          "Prospects"
+        );
 
-      const localFileModifiedTime = fs.statSync(localFilePath).mtime;
-      const dropboxFileModifiedTime = new Date(result.client_modified);
+        const localFileModifiedTime = fs.statSync(localFilePath).mtime;
+        const dropboxFileModifiedTime = new Date(result.client_modified);
 
-      if (dropboxFileModifiedTime > localFileModifiedTime) {
-        document.getElementById("messages").innerText =
-          "A newer version is available!";
-      } else {
-        document.getElementById("messages").innerText =
-          "You have the latest version.";
+        if (dropboxFileModifiedTime > localFileModifiedTime) {
+          document.getElementById("messages").innerText =
+            "A newer version is available!";
+        } else {
+          document.getElementById("messages").innerText =
+            "You have the latest version.";
+        }
+      } catch (fsErr) {
+        document.getElementById(
+          "messages"
+        ).innerText = `Filesystem error: ${fsErr.message}`;
       }
     }
   );
+}
+
+function createBackupForFile(filePath) {
+  const messagesElem = document.getElementById("messages");
+  try {
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}_${
+      today.getMonth() + 1
+    }_${today.getDate()}_${today.getHours()}h${today.getMinutes()}m${today.getSeconds()}s`;
+    const backupFileName =
+      path.basename(filePath, path.extname(filePath)) +
+      `_${dateStr}_backUp` +
+      path.extname(filePath);
+
+    // Path for the backup file
+    const backupFilePath = path.join(path.dirname(filePath), backupFileName);
+
+    // Copy the file to a backup
+    fs.copyFileSync(filePath, backupFilePath);
+
+    messagesElem.innerHTML = `<span class="label">Backup Status:</span> <span class="value">Success! Backup created at ${backupFilePath}</span>`;
+    return backupFilePath;
+  } catch (error) {
+    messagesElem.innerHTML = `<span class="label">Backup Error:</span> <span class="value">Failed to create backup for ${filePath}. Reason: ${error.message}</span>`;
+    return null; // Indicating that the backup wasn't successful
+  }
 }
 
 function downloadProspect() {
@@ -125,27 +160,38 @@ function downloadProspect() {
     {
       resource: "files/download",
       parameters: {
-        path: "/Prospect.zip",
+        path: "/Icarus/Nebula Nokedli.json",
       },
     },
     (err, result, response) => {
       if (err) {
-        document.getElementById("messages").innerText = "Error downloading.";
+        document.getElementById("messages").innerText = `Error downloading: ${
+          err.error_summary || JSON.stringify(err)
+        }`;
         return;
       }
+      console.log(response);
 
       const localFilePath = path.join(
         LOCALAPPDATA,
         "Icarus/Saved/PlayerData",
         detectedSteamID,
-        "Prospects"
+        "Prospects",
+        "Nebula Nokedli.json"
       );
 
       // Before overwriting, backup the existing file.
-      fs.copyFileSync(localFilePath, localFilePath + ".backup");
+      // TODO Need to create a switch for this on the UI
+      //createBackupForFile(localFilePath);
 
       // Write the new downloaded content.
-      fs.writeFileSync(localFilePath, response);
+      if (response && response.data) {
+        fs.writeFileSync(localFilePath, response.data); // Using `response.data` since that's where the actual file content (buffer) is.
+      } else {
+        document.getElementById("messages").innerText =
+          "Unexpected response format from Dropbox.";
+        return;
+      }
 
       document.getElementById("messages").innerText = "Download successful!";
     }
@@ -164,25 +210,55 @@ function uploadProspect() {
     LOCALAPPDATA,
     "Icarus/Saved/PlayerData",
     detectedSteamID,
-    "Prospects"
+    "Prospects",
+    "Nebula Nokedli.json"
   );
+
+  //   const readStream = window.electron.fs.createReadStream(localFilePath);
+  //   readStream.on("error", (err) => {
+  //     document.getElementById("messages").innerText =
+  //       "Error reading file: " + err.message;
+  //   });
+
+  // Read the file's content into memory
+  const fileContent = fs.readFileSync(localFilePath, "utf8");
+
+  console.log(`File size: ${fileContent.length}`);
+  // DEBUG
+  //   console.log(fileContent);
+  //   const debugFilePath = path.join(
+  //     LOCALAPPDATA,
+  //     "Icarus/Saved/PlayerData",
+  //     detectedSteamID,
+  //     "Prospects",
+  //     "debugFile.json"
+  //   );
+  //   fs.writeFileSync(debugFilePath, fileContent);
 
   dropbox(
     {
       resource: "files/upload",
       parameters: {
-        path: "/Prospect.zip",
+        path: "/Icarus/Nebula Nokedli.json",
         mode: "overwrite",
       },
-      readStream: fs.createReadStream(localFilePath),
+      body: fileContent,
+      //   body: Buffer.from(fileContent),
+      headers: {
+        // "Content-Type": "application/octet-stream",
+      },
     },
     (err, result) => {
       if (err) {
-        document.getElementById("messages").innerText = "Error uploading.";
+        document.getElementById(
+          "messages"
+        ).innerText = `Error uploading: ${JSON.stringify(err)}`;
         return;
       }
-
-      document.getElementById("messages").innerText = "Upload successful!";
+      //   document.getElementById("messages").innerText = "Upload successful!";
+      document.getElementById(
+        "messages"
+      ).innerText = `Upload successful! Response: ${JSON.stringify(result)}`;
     }
   );
 }
@@ -236,13 +312,6 @@ function getLocalSaveInfo() {
 }
 
 function createBackup() {
-  const prospectName = "Nebula Nokedli";
-  const today = new Date();
-  const dateStr = `${today.getFullYear()}_${
-    today.getMonth() + 1
-  }_${today.getDate()}_${today.getHours()}h${today.getMinutes()}m${today.getSeconds()}s`;
-  const backupFileName = `${prospectName}_${dateStr}_backUp.gz`;
-
   // Path for the original prospect file
   const filePath = path.join(
     LOCALAPPDATA,
@@ -252,42 +321,8 @@ function createBackup() {
     "Nebula Nokedli.json"
   );
 
-  // Path for the backup file
-  const backupFilePath = path.join(
-    LOCALAPPDATA,
-    "Icarus/Saved/PlayerData",
-    detectedSteamID,
-    "Prospects",
-    backupFileName
-  );
-
-  fs.readFile(filePath, "utf8", (err, data) => {
-    if (err) {
-      document.getElementById("messages").innerText =
-        "Error reading the original file.";
-      return;
-    }
-
-    window.electron.gzip(data, (compressionErr, compressedData) => {
-      if (compressionErr) {
-        document.getElementById("messages").innerText =
-          "Error compressing the file.";
-        return;
-      }
-
-      fs.writeFile(backupFilePath, compressedData, (writeErr) => {
-        if (writeErr) {
-          document.getElementById("messages").innerText =
-            "Error saving the backup.";
-          return;
-        }
-
-        document.getElementById(
-          "messages"
-        ).innerText = `Backup successful! Backup saved as ${backupFileName}`;
-      });
-    });
-  });
+  // Create the backup
+  const backupPath = createBackupForFile(filePath);
 }
 
 // Detect the actual Steam User
