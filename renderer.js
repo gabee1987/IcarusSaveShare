@@ -1,7 +1,8 @@
-const fs = require("fs");
-const path = require("path");
-const { dialog } = require("electron").remote;
-const dropboxV2Api = require("dropbox-v2-api");
+console.log(window.electron);
+const fs = window.electron.fs;
+const path = window.electron.path;
+const dialog = window.electron.dialog;
+const dropboxV2Api = window.electron.dropboxV2Api;
 
 const config = require("./config.json");
 const DROPBOX_TOKEN = config.DROPBOX_TOKEN;
@@ -100,10 +101,51 @@ function uploadProspect() {
   );
 }
 
+function getLocalSaveInfo() {
+  const filePath = path.join(
+    process.env.LOCALAPPDATA,
+    `Icarus/Saved/PlayerData/${config.STEAM_ID}/Prospects/Nebula Nokedli.json`
+  );
+
+  fs.readFile(filePath, "utf8", (err, data) => {
+    if (err) {
+      document.getElementById("messages").innerText =
+        "Error reading save file.";
+      return;
+    }
+
+    const saveInfo = JSON.parse(data);
+    const prospectInfo = saveInfo.ProspectInfo;
+
+    let displayMessage = `Prospect Name: ${prospectInfo.ProspectID}\n`;
+    displayMessage += `Difficulty: ${prospectInfo.Difficulty}\n`;
+    displayMessage += `Time Spent: ${prospectInfo.ElapsedTime} seconds\n`;
+    displayMessage += "Members:\n";
+
+    prospectInfo.AssociatedMembers.forEach((member) => {
+      displayMessage += `- ${member.AccountName} (${member.CharacterName}): ${
+        member.IsCurrentlyPlaying ? "Currently Playing" : "Offline"
+      }\n`;
+    });
+
+    document.getElementById("messages").innerText = displayMessage;
+  });
+}
+
+// Check if the uploaded version is the most recent save
 document
   .getElementById("checkBtn")
   .addEventListener("click", checkForNewerVersion);
+
+// Download the world save file to the game's appData folder
 document
   .getElementById("downloadBtn")
   .addEventListener("click", downloadProspect);
+
+// Upload the world save file from the game's appData folder to DropBox
 document.getElementById("uploadBtn").addEventListener("click", uploadProspect);
+
+// Display the local world save informations
+document
+  .getElementById("getSaveInfoBtn")
+  .addEventListener("click", getLocalSaveInfo);

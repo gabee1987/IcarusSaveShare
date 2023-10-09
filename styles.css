@@ -36,6 +36,9 @@ button:active {
   border-radius: 5px;
   background-color: #293846;
   min-height: 50px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: "Courier New", monospace;
 }
 
 .logo-container {

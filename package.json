@@ -22,6 +22,8 @@
     "electron": "^26.3.0"
   },
   "dependencies": {
-    "dropbox-v2-api": "^2.5.10"
+    "@electron/remote": "^2.0.12",
+    "dropbox-v2-api": "^2.5.10",
+    "update-electron-app": "^2.0.1"
   }
 }

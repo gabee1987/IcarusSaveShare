@@ -1,4 +1,7 @@
+require("@electron/remote/main").initialize();
+const path = require("path");
 const { app, BrowserWindow } = require("electron");
+const { enable } = require("@electron/remote/main");
 
 let mainWindow;
 
@@ -7,10 +10,16 @@ function createWindow() {
     width: 800,
     height: 600,
     webPreferences: {
-      nodeIntegration: true,
+      //   sandbox: false,
+      nodeIntegration: false, // Turn off node integration
+      contextIsolation: true, // Isolate context
+      nodeIntegrationInWorker: true,
+      enableRemoteModule: true,
+      preload: path.join(__dirname, "preload.js"), // Specify the preload script
     },
   });
 
+  enable(mainWindow.webContents);
   mainWindow.loadFile("index.html");
 
   mainWindow.on("closed", function () {
