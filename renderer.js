@@ -221,7 +221,7 @@ function uploadProspect() {
   //   });
 
   // Read the file's content into memory
-  const fileContent = fs.readFileSync(localFilePath, "utf8");
+  const fileContent = fs.readFileSync(localFilePath);
 
   console.log(`File size: ${fileContent.length}`);
   // DEBUG
@@ -245,7 +245,7 @@ function uploadProspect() {
       body: fileContent,
       //   body: Buffer.from(fileContent),
       headers: {
-        // "Content-Type": "application/octet-stream",
+        "Content-Type": "application/octet-stream",
       },
     },
     (err, result) => {
